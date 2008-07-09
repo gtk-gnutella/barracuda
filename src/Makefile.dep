@@ -1,0 +1,4 @@
+main.o: main.c lib/common.h lib/config.h lib/casts.h lib/debug.h \
+  lib/common.h lib/compat.h lib/append.h lib/nettools.h lib/net_addr.h \
+  lib/base32.h lib/compat.h lib/ggep.h lib/net_addr.h lib/nettools.h \
+  lib/utf8.h

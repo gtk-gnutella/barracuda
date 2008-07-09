@@ -1,0 +1,66 @@
+# You'll need a Bourne Shell, bash or ksh should work as well
+SHELL = /bin/sh
+
+OBJECTS =	\
+	main.o \
+
+# Leave the above line empty
+
+INCLUDES =	\
+	config.h \
+
+# Leave the above line empty
+
+LIB_SOURCES =	\
+	lib/base32.c	\
+	lib/cobs.c	\
+	lib/compat.c	\
+	lib/debug.c	\
+	lib/ggep.c	\
+	lib/nettools.c	\
+
+# Leave the above line empty
+
+LIB_OBJECTS =	\
+	lib/base32.o	\
+	lib/cobs.o	\
+	lib/compat.o	\
+	lib/debug.o	\
+	lib/ggep.o	\
+	lib/nettools.o	\
+
+# Leave the above line empty
+
+LIB_INCLUDES =	\
+	lib/append.h	\
+	lib/base32.h	\
+	lib/casts.h	\
+	lib/cobs.h	\
+	lib/common.h	\
+	lib/config.h	\
+	lib/debug.h	\
+	lib/ggep.h	\
+	lib/nettools.h	\
+	lib/utf8.h	\
+
+# Leave the above line empty
+
+
+all:	barracuda
+
+lib::
+	cd lib && $(MAKE)
+
+clean:
+	rm -f -- barracuda $(OBJECTS); cd lib && $(MAKE) clean
+
+clobber: distclean
+
+distclean: clean
+
+barracuda: $(INCLUDES) $(OBJECTS) $(LIB_SOURCES) $(LIB_INCLUDES) lib
+	$(CC) -o $@ $(OBJECTS) $(LIB_OBJECTS) $(LDFLAGS)
+
+install: barracuda
+	mkdir -p "$(bin_dir)"; cp barracuda "$(bin_dir)/"
+

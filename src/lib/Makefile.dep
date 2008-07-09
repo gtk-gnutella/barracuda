@@ -1,0 +1,10 @@
+base32.o: base32.c common.h config.h casts.h debug.h compat.h base32.h
+cobs.o: cobs.c cobs.h common.h config.h casts.h debug.h compat.h
+compat.o: compat.c compat.h common.h config.h casts.h debug.h append.h \
+  nettools.h net_addr.h
+debug.o: debug.c debug.h common.h config.h casts.h compat.h
+ggep.o: ggep.c ggep.h common.h config.h casts.h debug.h compat.h cobs.h \
+  append.h nettools.h net_addr.h
+mem.o: mem.c mem.h common.h config.h casts.h debug.h compat.h
+nettools.o: nettools.c nettools.h common.h config.h casts.h debug.h \
+  compat.h net_addr.h append.h base32.h
