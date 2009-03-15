@@ -468,6 +468,8 @@ static const struct {
   GGEP_ID(AUTH),
   GGEP_ID(BH),
   GGEP_ID(CT),
+  GGEP_ID(DHT),
+  GGEP_ID(DHTIPP),
   GGEP_ID(DU),
   GGEP_VENDOR_ID(GTKG, IPP6),
   GGEP_VENDOR_ID(GTKG, IPV6),
