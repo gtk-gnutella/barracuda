@@ -1074,7 +1074,9 @@ static const struct vmsg_head {
   { VC_LIME, 22, 1, "Push-Proxy ACK",         handle_vmsg_port },
   { VC_LIME, 22, 2, "Push-Proxy ACK",         handle_vmsg_addr_port },
   { VC_LIME, 23, 1, "HEAD Ping",              handle_vmsg_dummy },
-  { VC_LIME, 24, 1, "HEAD Ping",              handle_vmsg_dummy },
+  { VC_LIME, 23, 2, "HEAD Ping",              handle_vmsg_dummy },
+  { VC_LIME, 24, 1, "HEAD Pong",              handle_vmsg_dummy },
+  { VC_LIME, 24, 2, "HEAD Pong",              handle_vmsg_dummy },
 };
 
 static void
