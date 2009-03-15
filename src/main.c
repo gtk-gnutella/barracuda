@@ -59,6 +59,8 @@ enum dump_header_flags {
   DH_F_TCP  = (1 << 1),
   DH_F_IPV4 = (1 << 2),
   DH_F_IPV6 = (1 << 3),
+  DH_F_TO   = (1 << 4),
+  DH_F_CTRL = (1 << 5),
 
   NUM_DH_F
 };
@@ -144,6 +146,16 @@ dump_header_addr_to_string(const struct dump_header *dh)
 }
 
 static const char *
+dump_header_ctrl_to_string(const struct dump_header *dh)
+{
+  if (DH_F_CTRL & dh->flags) {
+    return ", prioritary";
+  } else {
+    return "";
+  }
+}
+
+static const char *
 dump_header_protocol_to_string(const struct dump_header *dh)
 {
   if (DH_F_UDP & dh->flags) {
@@ -156,11 +168,20 @@ dump_header_protocol_to_string(const struct dump_header *dh)
 }
 
 static void
-print_dump_header(const struct dump_header *dh)
+print_dump_from_header(const struct dump_header *dh)
 {
   printf("From: %s (%s)\n",
     dump_header_addr_to_string(dh),
     dump_header_protocol_to_string(dh));
+}
+
+static void
+print_dump_to_header(const struct dump_header *dh)
+{
+  printf("To: %s (%s%s)\n",
+    dump_header_addr_to_string(dh),
+    dump_header_protocol_to_string(dh),
+    dump_header_ctrl_to_string(dh));
 }
 
 static int
@@ -1250,6 +1271,24 @@ skip_handshake(int fd)
 }
 
 
+static void
+safe_read(const int fd, void * const dst, const size_t buf_size)
+{
+  size_t ret = fill_buffer_from_fd(fd, dst, buf_size);
+  switch (ret) {
+  case 0:
+    exit(EXIT_SUCCESS);
+  case (size_t) -1:
+    fprintf(stderr, "Error: Could not fill packet buffer: %s\n",
+        strerror(errno));
+    exit(EXIT_FAILURE);
+  case 1:
+    break;
+  default:
+    RUNTIME_ASSERT(0);
+  }
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -1330,21 +1369,16 @@ main(int argc, char *argv[])
 
     if (with_dump_headers) {
       struct dump_header dh;
-      
-      ret = fill_buffer_from_fd(fd, &dh, sizeof dh);
-      switch (ret) {
-      case 0:
-        exit(EXIT_SUCCESS);
-      case (size_t) -1:
-        fprintf(stderr, "Error: Could not fill packet buffer: %s\n",
-            strerror(errno));
-        exit(EXIT_FAILURE);
-      case 1:
-        break;
-      default:
-        RUNTIME_ASSERT(0);
+      safe_read(fd, &dh, sizeof dh);
+
+      if (dh.flags & DH_F_TO) {
+        struct dump_header dh_from;
+        safe_read(fd, &dh_from, sizeof dh_from);
+        print_dump_from_header(&dh_from);
+        print_dump_to_header(&dh);
+      } else {
+        print_dump_from_header(&dh);
       }
-      print_dump_header(&dh);
     }
 
     ret = fill_buffer_from_fd(fd, &header, sizeof header);
@@ -1403,7 +1437,7 @@ main(int argc, char *argv[])
     case GPT_QHIT:      handle_qhit(payload, payload_size); break;
     case GPT_HSEP:      handle_hsep(payload, payload_size); break;
     }
-    printf("--\n");
+    printf("==========\n");
 
   }
 
