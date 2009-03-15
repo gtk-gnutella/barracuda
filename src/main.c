@@ -1005,12 +1005,40 @@ handle_vmsg_time_sync_reply(const struct gnutella_header *header,
 }
 
 static void
+handle_vmsg_port(const struct gnutella_header *header,
+  const char *data, size_t size)
+{
+  const char *base = &data[8];
+  const size_t len = size - 8;
+  (void) header;
+  if (len == 2) {
+    printf("Port: %u\n", peek_le16(base));
+  } else {
+    handle_extension(base, len);
+  }
+}
+
+static void
+handle_vmsg_addr_port(const struct gnutella_header *header,
+  const char *data, size_t size)
+{
+  const char *base = &data[8];
+  const size_t len = size - 8;
+  (void) header;
+  if (len == 6) {
+    printf("Address: %s\n", net_addr_port_to_string(
+            net_addr_peek_ipv4(&base[0]), peek_le16(&base[4])));
+  } else {
+    handle_extension(base, len);
+  }
+}
+
+static void
 handle_vmsg_dummy(const struct gnutella_header *header,
   const char *data, size_t size)
 {
   (void) header;
-  (void) data;
-  (void) size;
+  handle_extension(&data[8], size - 8);
 }
 
 static const struct vmsg_head {
@@ -1043,8 +1071,8 @@ static const struct vmsg_head {
   { VC_LIME, 13, 1, "OOB Proxy Veto",         handle_vmsg_dummy },
   { VC_LIME, 21, 1, "Push-Proxy Request",     handle_vmsg_dummy },
   { VC_LIME, 21, 2, "Push-Proxy Request",     handle_vmsg_dummy },
-  { VC_LIME, 22, 1, "Push-Proxy ACK",         handle_vmsg_dummy },
-  { VC_LIME, 22, 2, "Push-Proxy ACK",         handle_vmsg_dummy },
+  { VC_LIME, 22, 1, "Push-Proxy ACK",         handle_vmsg_port },
+  { VC_LIME, 22, 2, "Push-Proxy ACK",         handle_vmsg_addr_port },
   { VC_LIME, 23, 1, "HEAD Ping",              handle_vmsg_dummy },
   { VC_LIME, 24, 1, "HEAD Ping",              handle_vmsg_dummy },
 };
