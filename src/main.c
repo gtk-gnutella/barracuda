@@ -819,6 +819,19 @@ handle_qhit(const char *data, size_t size)
   printf("----\n");
 }
 
+enum {
+  QUERY_F_MARK        = (1 << 15),
+  QUERY_F_FIREWALLED  = (1 << 14),
+  QUERY_F_WANT_XML    = (1 << 13),
+  QUERY_F_LEAF_GUIDED = (1 << 12),
+  QUERY_F_GGEP_H      = (1 << 11),
+  QUERY_F_OOB         = (1 << 10),
+  QUERY_F_RUDP        = (1 << 9),
+  QUERY_F_BIT8        = (1 << 8),
+
+  NUM_QUERY_F
+};
+
 static void
 handle_query(const struct gnutella_header *header,
   const char * const data, const size_t size)
@@ -832,23 +845,25 @@ handle_query(const struct gnutella_header *header,
     int swapped = 0;
 
     flags = peek_be16(data);
-    if (!(flags & (1 << 15))) {
-        int mask = (1 << 15) | (1 << 11) | (1 << 12);
+    if (!(flags & QUERY_F_MARK)) {
+        uint16_t mask = QUERY_F_MARK | QUERY_F_GGEP_H | QUERY_F_LEAF_GUIDED;
         uint16_t reversed;
-        reversed = peek_le16(data);   /* RAZA */
+
+        /* Try to decode endian swapped flags as emitted by RAZA */
+        reversed = peek_le16(data);
         if ((reversed & mask) == mask) {
           swapped = 1;
           flags = reversed;
         }
     }
-    if (flags & (1 << 15)) {
-      int is_firewalled = flags & (1 << 14);
-      int want_xml = flags & (1 << 13);
-      int leaf_guided = flags & (1 << 12);
-      int ggep_h = flags & (1 << 11);
-      int is_oob = flags & (1 << 10);
-      int rudp_supp = flags & (1 << 9);
-      int bit8 = flags & (1 << 8);
+    if (flags & QUERY_F_MARK) {
+      int is_firewalled = flags & QUERY_F_FIREWALLED;
+      int want_xml = flags & QUERY_F_WANT_XML;
+      int leaf_guided = flags & QUERY_F_LEAF_GUIDED;
+      int ggep_h = flags & QUERY_F_GGEP_H;
+      int is_oob = flags & QUERY_F_OOB;
+      int rudp_supp = flags & QUERY_F_RUDP;
+      int bit8 = flags & QUERY_F_BIT8;
       
       printf("Flags:  %s%s%s%s%s%s%s%s\n"
         , is_firewalled ? "firewalled " : ""
