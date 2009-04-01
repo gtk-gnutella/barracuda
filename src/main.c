@@ -829,8 +829,18 @@ handle_query(const struct gnutella_header *header,
     printf("Too short:  %s\n", escape_buffer(data, size));
   } else {
     uint16_t flags;
+    int swapped = 0;
 
     flags = peek_be16(data);
+    if (!(flags & (1 << 15))) {
+        int mask = (1 << 15) | (1 << 11) | (1 << 12);
+        uint16_t reversed;
+        reversed = peek_le16(data);   /* RAZA */
+        if ((reversed & mask) == mask) {
+          swapped = 1;
+          flags = reversed;
+        }
+    }
     if (flags & (1 << 15)) {
       int is_firewalled = flags & (1 << 14);
       int want_xml = flags & (1 << 13);
@@ -840,7 +850,7 @@ handle_query(const struct gnutella_header *header,
       int rudp_supp = flags & (1 << 9);
       int bit8 = flags & (1 << 8);
       
-      printf("Flags:  %s%s%s%s%s%s%s\n"
+      printf("Flags:  %s%s%s%s%s%s%s%s\n"
         , is_firewalled ? "firewalled " : ""
         , want_xml ? "XML " : ""
         , leaf_guided ? "leaf-guided " : ""
@@ -848,6 +858,7 @@ handle_query(const struct gnutella_header *header,
         , is_oob ? "OOB " : ""
         , rudp_supp ? "RUDP " : ""
         , bit8 ? "bit8 " : ""
+        , swapped ? "[SWAPPED]" : ""
       );
       if (is_oob) {
         printf("OOB address:  %s\n",
