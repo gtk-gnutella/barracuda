@@ -1301,7 +1301,7 @@ skip_handshake(int fd)
   }
 
   for (;;) {
-    int ret;
+    size_t ret;
 
     ret = fill_buffer_from_fd(fd, &ch, 1);
     switch (ret) {
