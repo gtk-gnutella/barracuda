@@ -83,6 +83,21 @@ struct gnutella_header {
   uint8_t size[4];  /* little-endian */
 };
 
+struct kademlia_header {
+  /* (gnutella header) */
+  uint8_t type;
+  uint8_t contact_vendor[4];
+  uint8_t contact_major;
+  uint8_t contact_minor;
+  uint8_t contact_kuid[20];
+  uint8_t contact_ip_length;
+  uint8_t contact_ipv4[4];
+  uint8_t contact_port[2];
+  uint8_t instance;
+  uint8_t flags;
+  uint8_t extended[2];
+};
+
 struct gnutella_qhit_header {
   uint8_t hits;
   uint8_t port[2]; /* little-endian */
@@ -102,9 +117,22 @@ enum gnutella_packet_type {
   GPT_VMSG_PRIV = 0x31,
   GPT_VMSG_STD  = 0x32,
   GPT_PUSH      = 0x40,
+  GPT_RUDP      = 0x41,
+  GPT_DHT       = 0x44,
   GPT_QUERY     = 0x80,
   GPT_QHIT      = 0x81,
   GPT_HSEP      = 0xCD
+};
+
+enum kademlia_packet_type {
+  DHT_PING                = 0x01,
+  DHT_PONG                = 0x02,
+  DHT_STORE               = 0x03,
+  DHT_STORE_ACK           = 0x04,
+  DHT_FIND_NODE           = 0x05,
+  DHT_FIND_NODE_RESPONSE  = 0x06,
+  DHT_FIND_VALUE          = 0x07,
+  DHT_FIND_VALUE_RESPONSE = 0x08
 };
 
 static const char *
@@ -319,9 +347,33 @@ packet_type_to_string(uint8_t type)
   case GPT_VMSG_PRIV: return "VMSG.PRIV";
   case GPT_VMSG_STD:  return "VMSG.STD";
   case GPT_PUSH:      return "PUSH";
+  case GPT_RUDP:      return "RUDP";
+  case GPT_DHT:       return "DHT";
   case GPT_QUERY:     return "QUERY";
   case GPT_QHIT:      return "QHIT";
   case GPT_HSEP:      return "HSEP";
+  }
+
+  buf[2] = hexa[(type >> 4) & 0xf];
+  buf[3] = hexa[type & 0xf];
+  return buf;
+}
+
+static const char *
+kademlia_type_to_string(uint8_t type)
+{
+  static char buf[] = "0x00";
+  static const char hexa[] = "0123456789abcdef";
+
+  switch ((enum kademlia_packet_type) type) {
+  case DHT_PING:                return "DHT_PING";
+  case DHT_PONG:                return "DHT_PONG";
+  case DHT_STORE:               return "STORE";
+  case DHT_STORE_ACK:           return "STORE_ACK";
+  case DHT_FIND_NODE:           return "FIND_NODE";
+  case DHT_FIND_NODE_RESPONSE:  return "FIND_NODE_RESPONSE";
+  case DHT_FIND_VALUE:          return "FIND_VALUE";
+  case DHT_FIND_VALUE_RESPONSE: return "FIND_VALUE_RESPONSE";
   }
 
   buf[2] = hexa[(type >> 4) & 0xf];
@@ -1178,6 +1230,20 @@ handle_hsep(const char *data, size_t size)
   (void) size;
 }
 
+static void
+handle_rudp(const char *data, size_t size)
+{
+  (void) data;
+  (void) size;
+}
+
+static void
+handle_dht(const char *data, size_t size)
+{
+  (void) data;
+  (void) size;
+}
+
 void
 utf8_regression_1(void)
 {
@@ -1453,17 +1519,7 @@ main(int argc, char *argv[])
     }
 
     payload_size = peek_le32(header.size);
-    printf("GUID: %08lx-%08lx-%08lx-%08lx\n",
-        (unsigned long) peek_be32(&header.guid.data[0]),
-        (unsigned long) peek_be32(&header.guid.data[4]),
-        (unsigned long) peek_be32(&header.guid.data[8]),
-        (unsigned long) peek_be32(&header.guid.data[12]));
-    printf("Type: %s\n", packet_type_to_string(header.type));
-    printf("TTL:  %u\n", (unsigned char) header.ttl);
-    printf("Hops: %u\n", (unsigned char) header.hops);
-    printf("Size: %lu\n", (unsigned long) payload_size);
-    printf("--\n");
-   
+
     if (payload_size > GNUTELLA_MAX_PAYLOAD) {
       fprintf(stderr, "Error: Message is too large.\n");
       return -1;
@@ -1482,6 +1538,26 @@ main(int argc, char *argv[])
       }
     }
 
+    printf("GUID: %08lx-%08lx-%08lx-%08lx\n",
+        (unsigned long) peek_be32(&header.guid.data[0]),
+        (unsigned long) peek_be32(&header.guid.data[4]),
+        (unsigned long) peek_be32(&header.guid.data[8]),
+        (unsigned long) peek_be32(&header.guid.data[12]));
+
+    if (header.type != GPT_DHT) {
+      printf("Type: %s\n", packet_type_to_string(header.type));
+      printf("TTL : %u\n", (unsigned char) header.ttl);
+      printf("Hops: %u\n", (unsigned char) header.hops);
+      printf("Size: %lu\n", (unsigned long) payload_size);
+    } else {
+      printf("Type: %s\n", kademlia_type_to_string(header.type));
+      printf("V   : %u.%u\n",
+          (unsigned char) header.ttl, (unsigned char) header.hops);
+      printf("Size: %lu\n", (unsigned long) payload_size + 23 - 61);
+    }
+
+    printf("--\n");
+   
     switch ((enum gnutella_packet_type) header.type) {
     case GPT_PING:      handle_ping(payload, payload_size); break;
     case GPT_PONG:      handle_pong(payload, payload_size); break;
@@ -1489,6 +1565,8 @@ main(int argc, char *argv[])
     case GPT_VMSG_PRIV: handle_vmsg_priv(&header, payload, payload_size); break;
     case GPT_VMSG_STD:  handle_vmsg_std(payload, payload_size); break;
     case GPT_PUSH:      handle_push(payload, payload_size); break;
+    case GPT_RUDP:      handle_rudp(payload, payload_size); break;
+    case GPT_DHT:       handle_dht(payload, payload_size); break;
     case GPT_QUERY:     handle_query(&header, payload, payload_size); break;
     case GPT_QHIT:      handle_qhit(payload, payload_size); break;
     case GPT_HSEP:      handle_hsep(payload, payload_size); break;
